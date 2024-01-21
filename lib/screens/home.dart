@@ -220,7 +220,7 @@ class _HomeState extends State<Home> {
                                   alignment: Alignment.centerRight,
                                   child: Container(
                                     width: MediaQuery.of(context).size.width *
-                                        0.50,
+                                        0.60,
                                     margin: EdgeInsets.all(4.0),
                                     padding: EdgeInsets.all(4.0),
                                     decoration: BoxDecoration(
@@ -275,7 +275,7 @@ class _HomeState extends State<Home> {
                                       const EdgeInsets.only(left: 6, top: 6),
                                   child: Container(
                                     width: MediaQuery.of(context).size.width *
-                                        0.50,
+                                        0.60,
                                     margin: EdgeInsets.all(3.0),
                                     padding: EdgeInsets.all(3.0),
                                     decoration: BoxDecoration(
