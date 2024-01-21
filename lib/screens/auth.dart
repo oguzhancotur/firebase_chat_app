@@ -1,8 +1,10 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 final firebaseAuthInstance = FirebaseAuth.instance;
+final firebaseFirestoreInstance = FirebaseFirestore.instance;
 
 class Auth extends StatefulWidget {
   const Auth({Key? key}) : super(key: key);
@@ -16,6 +18,7 @@ class _AuthState extends State<Auth> {
   var _isLogin = true;
   var _email = '';
   var _password = '';
+  var _username = '';
 
   void _submit() async {
     _formKey.currentState!.save();
@@ -36,6 +39,10 @@ class _AuthState extends State<Auth> {
         final userCredentials = await firebaseAuthInstance
             .createUserWithEmailAndPassword(email: _email, password: _password);
         print(userCredentials);
+        firebaseFirestoreInstance
+            .collection("users")
+            .doc(userCredentials.user!.uid)
+            .set({'email': _email, 'name': _username});
       } on FirebaseAuthException catch (error) {
         // Hata mesajı göster..
         ScaffoldMessenger.of(context).showSnackBar(
@@ -44,29 +51,32 @@ class _AuthState extends State<Auth> {
     }
   }
 
-  void _googleSignIn() async {
+  void signInWithGoogle() async {
     try {
-      // Trigger the authentication flow
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-
-      // Obtain the auth details from the request
       final GoogleSignInAuthentication? googleAuth =
-          await googleUser?.authentication;
-
-      // Create a new credential
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth?.accessToken,
-        idToken: googleAuth?.idToken,
+          await googleUser!.authentication;
+      final googleCredential = GoogleAuthProvider.credential(
+        accessToken: googleAuth!.accessToken,
+        idToken: googleAuth.idToken,
       );
-
-      // Once signed in, return the UserCredential
       final userCredential =
-          await firebaseAuthInstance.signInWithCredential(credential);
+          await firebaseAuthInstance.signInWithCredential(googleCredential);
       print(userCredential);
-    } on FirebaseAuthException catch (error) {
-      // Hata mesajı göster..
-      ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.message ?? "Giriş başarısız.")));
+
+      // Google'dan gelen kullanıcı bilgilerini Firestore'a kaydetmek
+      firebaseFirestoreInstance
+          .collection("users")
+          .doc(userCredential.user!.uid)
+          .set({
+        'email': userCredential.user!.email,
+        'name': userCredential.user!.displayName, // Kullanıcının adını alıyoruz
+        'imageUrl': userCredential
+            .user!.photoURL, // Kullanıcının profil resmini alıyoruz
+      });
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(e.message!)));
     }
   }
 
@@ -79,7 +89,7 @@ class _AuthState extends State<Auth> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Card(
-                color: Color.fromARGB(115, 10, 161, 166),
+                color: Color.fromARGB(115, 55, 219, 225),
                 margin: const EdgeInsets.all(20),
                 child: Padding(
                   padding: const EdgeInsets.all(12.0),
@@ -105,43 +115,54 @@ class _AuthState extends State<Auth> {
                             _password = newValue!;
                           },
                         ),
+                        TextFormField(
+                          decoration:
+                              const InputDecoration(labelText: "Kullanıcı Adı"),
+                          onSaved: (newValue) {
+                            _username = newValue!;
+                          },
+                        ),
                         SizedBox(
                           height: 25,
                         ),
                         ElevatedButton(
-                            onPressed: () {
-                              _submit();
-                            },
-                            child: Text(_isLogin ? "Giriş Yap" : "Kayıt Ol")),
+                          onPressed: () {
+                            _submit();
+                          },
+                          child: Text(_isLogin ? "Giriş Yap" : "Kayıt Ol"),
+                        ),
                         TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _isLogin = !_isLogin;
-                              });
-                            },
-                            child: Text(_isLogin
-                                ? "Kayıt Sayfasına Git"
-                                : "Giriş Sayfasına Git")),
+                          onPressed: () {
+                            setState(() {
+                              _isLogin = !_isLogin;
+                            });
+                          },
+                          child: Text(_isLogin
+                              ? "Kayıt Sayfasına Git"
+                              : "Giriş Sayfasına Git"),
+                        ),
                         Padding(
                           padding: EdgeInsets.only(left: 35, right: 35),
                           child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      Color.fromARGB(221, 255, 255, 255)),
-                              onPressed: () {
-                                _googleSignIn();
-                              },
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Image.asset(
-                                    "assets/icon.png",
-                                    width: 30,
-                                    height: 30,
-                                  ),
-                                  Text("Google ile giriş yap"),
-                                ],
-                              )),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor:
+                                  Color.fromARGB(221, 255, 255, 255),
+                            ),
+                            onPressed: () {
+                              signInWithGoogle();
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Image.asset(
+                                  "assets/icon.png",
+                                  width: 30,
+                                  height: 30,
+                                ),
+                                Text("Google ile giriş yap"),
+                              ],
+                            ),
+                          ),
                         )
                       ],
                     ),
