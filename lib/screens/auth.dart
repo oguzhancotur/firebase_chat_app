@@ -42,7 +42,7 @@ class _AuthState extends State<Auth> {
         firebaseFirestoreInstance
             .collection("users")
             .doc(userCredentials.user!.uid)
-            .set({'email': _email, 'name': _username});
+            .set({'email': _email, 'name': _username, 'imageUrl': null});
       } on FirebaseAuthException catch (error) {
         // Hata mesajı göster..
         ScaffoldMessenger.of(context).showSnackBar(
